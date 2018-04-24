@@ -69,7 +69,7 @@ pmx.initModule({
 
             const workers = apps.filter(app => {
                 return typeof app.pm2_env.axm_options.isModule === 'undefined'
-                    && app.name === conf.app_name
+                    && conf.app_name.indexOf(app.name)!==-1
             })
 
             if (workers.length === 0) return setImmediate(() => done(null, ''))
