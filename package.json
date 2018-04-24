@@ -1,0 +1,34 @@
+{
+  "name": "pm2-cluster-prometheus",
+  "version": "1.0.0",
+  "description": "Aggregate node.js workers' metrics when use pm2 cluster mode",
+  "main": "app.js",
+  "dependencies": {
+    "address": "^1.0.3",
+    "consul": "^0.30.0",
+    "pm2": "^2.10.2",
+    "pmx": "beta",
+    "prom-client": "^11.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "config": {
+    "app_name": "api",
+    "app_group": "gleeman",
+    "port": 3000,
+    "reigster_disabled": false,
+    "consul_host": "127.0.0.1",
+    "consul_port": "8500"
+  },
+  "apps": [
+    {
+      "merge_logs": true,
+      "max_memory_restart": "200M",
+      "script": "app.js"
+    }
+  ],
+  "author": "Ruiyuan Wang",
+  "license": "MIT"
+}
