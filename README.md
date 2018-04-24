@@ -26,6 +26,8 @@ pm2 set pm2-cluster-prometheus:port 4000
 
 ## Node.js APP
 ```javascript
+
+// prom-client version require >= 11.0.0
 const promClient = require('prom-client')
 
 process.on('message', function (message) {
