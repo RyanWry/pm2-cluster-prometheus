@@ -57,19 +57,20 @@ pmx.initModule({
         const requestId = requestCtr++
 
         const done = (err, result) => {
-            if (err) return res.end(err.message)
+            if (err) {
+                return res.end(err.message)
+            }
 
             res.writeHead(200, {'Content-Type': promClient.register.contentType})
             res.end(result)
         }
-
 
         pm2.list((err, apps) => {
             if (err) return res.end(err.message)
 
             const workers = apps.filter(app => {
                 return typeof app.pm2_env.axm_options.isModule === 'undefined'
-                    && conf.app_name.indexOf(app.name)!==-1
+                    && conf.app_name.indexOf(app.name) !== -1
             })
 
             if (workers.length === 0) return setImmediate(() => done(null, ''))
@@ -82,6 +83,7 @@ pmx.initModule({
                 errorTimeout: setTimeout(() => {
                     request.failed = true
                     request.done(new Error('time out'))
+                    requests.delete(requestId)
                 }, 5000),
                 failed: false
             }
@@ -107,7 +109,9 @@ pmx.initModule({
     pm2.launchBus((err, bus) => {
 
         bus.on(GET_METRICS_RES, message => {
-            const request = requests.get(message.data.requestId);
+            const request = requests.get(message.data.requestId)
+            if (!request) return
+
             request.responses.push(message.data.metrics)
             request.pending--
 
