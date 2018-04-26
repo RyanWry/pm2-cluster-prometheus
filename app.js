@@ -122,9 +122,13 @@ pmx.initModule({
 
                 if (request.failed) return
 
-                const registry = AggregatorRegistry.aggregate(request.responses)
-                const promString = registry.metrics()
-                request.done(null, promString)
+                try {
+                    const registry = AggregatorRegistry.aggregate(request.responses)
+                    const promString = registry.metrics()
+                    request.done(null, promString)
+                } catch (err) {
+                    request.done(new Error('aggregate error prom-client version require >= 11.0.0'))
+                }
             }
         })
     })
