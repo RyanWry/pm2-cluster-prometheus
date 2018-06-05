@@ -8,6 +8,7 @@ const AggregatorRegistry = promClient.AggregatorRegistry
 
 const http = require('http')
 const url = require("url")
+const querystring = require('querystring')
 
 const GET_METRICS_REQ = 'prom:getMetricsReq'
 const GET_METRICS_RES = 'prom:getMetricsRes'
@@ -46,8 +47,25 @@ pmx.initModule({
 }, function (err, conf) {
     if (err) return console.error(err)
 
+    const sendWokerRequest = (id, requestId) => {
+
+        pm2.sendDataToProcessId({
+            id: id,
+            type: GET_METRICS_REQ,
+            data: {
+                requestId
+            },
+            topic: 'Get worker metrics'
+        }, err => {
+            if (err) console.error('send worker message error', err)
+        })
+    }
+
+
     const requestHandler = (req, res) => {
         const pathname = url.parse(req.url).pathname
+        const query = querystring.parse(url.parse(req.url).query)
+
         if (pathname === '/online') {return res.end('ok')}
         if (pathname !== '/metrics') {
             res.statusCode = 404
@@ -65,46 +83,46 @@ pmx.initModule({
             res.end(result)
         }
 
-        pm2.list((err, apps) => {
-            if (err) return res.end(err.message)
 
-            const workers = apps.filter(app => {
-                return typeof app.pm2_env.axm_options.isModule === 'undefined'
-                    && conf.app_name.indexOf(app.name) !== -1
-            })
+        const request = {
+            responses: [],
+            done,
+            errorTimeout: setTimeout(() => {
+                request.failed = true
+                request.done(new Error('time out'))
+                requests.delete(requestId)
+            }, 5000),
+            failed: false
+        }
 
-            if (workers.length === 0) return setImmediate(() => done(null, ''))
 
-
-            const request = {
-                responses: [],
-                pending: workers.length,
-                done,
-                errorTimeout: setTimeout(() => {
-                    request.failed = true
-                    request.done(new Error('time out'))
-                    requests.delete(requestId)
-                }, 5000),
-                failed: false
-            }
+        if (query.pm_id) {
+            request.pending = 1
             requests.set(requestId, request)
 
-            workers.forEach(worker => {
+            sendWokerRequest(Number(query.pm_id), requestId)
+        } else {
 
-                pm2.sendDataToProcessId({
-                    id: worker.pm_id,
-                    type: GET_METRICS_REQ,
-                    data: {
-                        requestId
-                    },
-                    topic: 'Get worker metrics'
-                }, err => {
-                    if (err) console.error('send worker message error', err)
+            pm2.list((err, apps) => {
+                if (err) return res.end(err.message)
+
+                const workers = apps.filter(app => {
+                    return typeof app.pm2_env.axm_options.isModule === 'undefined'
+                        && conf.app_name.indexOf(app.name) !== -1
+                })
+
+                if (workers.length === 0) return setImmediate(() => done(null, 'no metrics'))
+
+                request.pending = workers.length
+                requests.set(requestId, request)
+
+                workers.forEach(worker => {
+
+                    sendWokerRequest(worker.pm_id, requestId)
                 })
             })
-        })
+        }
     }
-
 
     pm2.launchBus((err, bus) => {
 
@@ -138,7 +156,24 @@ pmx.initModule({
     app.listen(conf.port, err => {
         if (err) console.error('server start error', err)
         console.log('server listen on', conf.port)
-        consul.startRegister(conf)
-    })
 
+        if (conf.register_mode === 'cluster') {
+            consul.startRegister(conf)
+        } else {
+            consul.deregister(conf)
+
+            pm2.list((err, apps) => {
+                if (err) return res.end(err.message)
+    
+                const workers = apps.filter(app => {
+                    return typeof app.pm2_env.axm_options.isModule === 'undefined'
+                        && conf.app_name.indexOf(app.name) !== -1
+                })
+    
+                workers.forEach(worker => {
+                    consul.startRegister(conf, worker.pm_id)
+                })
+            })
+        }
+    })
 })

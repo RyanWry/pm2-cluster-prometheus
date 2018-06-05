@@ -15,7 +15,8 @@ Default settings:
     "port": 3000,                  //http服务默认端口，提供 /metrics 和 /online 接口
     "reigster_disabled": false,    //是否禁止服务注册到 consul
     "consul_host": "127.0.0.1",    
-    "consul_port": "8500"
+    "consul_port": "8500",
+    "register_mode": "cluster"            // default:cluster   other: worker
   }
 ```
 To modify the config values you can use the following commands:
@@ -23,6 +24,12 @@ To modify the config values you can use the following commands:
 pm2 set pm2-cluster-prometheus:app_name hello
 pm2 set pm2-cluster-prometheus:port 4000
 ```
+## Mode
+"register_mode": "cluster"
+get metrics from  http://localhost:3000/metrics
+
+"register_mode": "worker"
+get each worker metrics from  http://localhost:3000/metrics?pm_id=1
 
 ## Node.js APP
 ```javascript
