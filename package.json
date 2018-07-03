@@ -1,6 +1,6 @@
 {
   "name": "pm2-cluster-prometheus",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Aggregate node.js workers' metrics when use pm2 cluster mode",
   "main": "app.js",
   "dependencies": {
